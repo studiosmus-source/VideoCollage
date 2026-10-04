@@ -130,7 +130,19 @@ class CollageView @JvmOverloads constructor(
         tiles.clear()
     }
 
+    data class Transform(val scale: Float, val translationX: Float, val translationY: Float)
+
     fun selectedUris(): List<Uri> = tiles.map { it.uri }
+
+    fun transforms(): List<Transform> = tiles.map {
+        Transform(it.view.scaleX, it.view.translationX, it.view.translationY)
+    }
+
+    fun gridSize(): Pair<Int, Int> = when (tiles.size) {
+        2 -> 2 to 1
+        3, 4 -> 2 to 2
+        else -> 1 to 1
+    }
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 }
