@@ -29,6 +29,7 @@ class MainActivity : AppCompatActivity() {
         binding.collage.setVideos(selected)
         binding.status.text = "${selected.size} video • trascina o usa due dita per zoom"
         binding.saveVideo.isEnabled = true
+        binding.changeLayout.isEnabled = true
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,6 +39,10 @@ class MainActivity : AppCompatActivity() {
 
         binding.addVideos.setOnClickListener {
             pickVideos.launch(arrayOf("video/*"))
+        }
+        binding.changeLayout.setOnClickListener {
+            binding.collage.cycleLayout()
+            binding.status.text = binding.collage.layoutLabel() + " • trascina o usa due dita per zoom"
         }
         binding.saveVideo.setOnClickListener {
             val uris = binding.collage.selectedUris()
