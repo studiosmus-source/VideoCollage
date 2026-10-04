@@ -7,7 +7,6 @@ import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
 import androidx.annotation.OptIn
-import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.OverlaySettings
 import androidx.media3.common.VideoCompositorSettings
@@ -42,8 +41,7 @@ class CollageExporter(private val context: Context) {
             val longestIndex = sources.indices.maxBy { sources[it].durationMs }
             val sequences = sources.mapIndexed { index, source ->
                 val item = EditedMediaItem.Builder(MediaItem.fromUri(source.uri)).build()
-                EditedMediaItemSequence.Builder(setOf(C.TRACK_TYPE_AUDIO, C.TRACK_TYPE_VIDEO))
-                    .addItem(item)
+                EditedMediaItemSequence.Builder(item)
                     .setIsLooping(index != longestIndex)
                     .build()
             }
