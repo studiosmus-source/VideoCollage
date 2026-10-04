@@ -30,6 +30,7 @@ class MainActivity : AppCompatActivity() {
         binding.status.text = "${selected.size} video • trascina o usa due dita per zoom"
         binding.saveVideo.isEnabled = true
         binding.changeLayout.isEnabled = true
+        binding.changeFormat.isEnabled = true
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,6 +40,18 @@ class MainActivity : AppCompatActivity() {
 
         binding.addVideos.setOnClickListener {
             pickVideos.launch(arrayOf("video/*"))
+        }
+        binding.changeFormat.setOnClickListener {
+            val labels = arrayOf("16:9", "9:16", "1:1", "4:5", "5:4", "3:2", "2:3")
+            val ratios = floatArrayOf(16f/9f, 9f/16f, 1f, 4f/5f, 5f/4f, 3f/2f, 2f/3f)
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Formato collage")
+                .setItems(labels) { _, which ->
+                    binding.collage.setCanvasRatio(ratios[which])
+                    binding.changeFormat.text = labels[which]
+                    binding.status.text = labels[which] + " • " + binding.collage.layoutLabel()
+                }
+                .show()
         }
         binding.changeLayout.setOnClickListener {
             binding.collage.cycleLayout()
@@ -50,7 +63,7 @@ class MainActivity : AppCompatActivity() {
             binding.saveVideo.isEnabled = false
             CollageExporter(this).export(
                 uris = uris,
-                transforms = binding.collage.transforms(),
+                state = binding.collage.exportState(),
                 onProgress = { message -> runOnUiThread { binding.status.text = message } },
                 onDone = {
                     runOnUiThread {
