@@ -30,7 +30,7 @@ class CollageExporter(private val context: Context) {
 
     fun export(
         uris: List<Uri>,
-        transforms: List<CollageView.Transform>,
+        state: CollageView.ExportState,
         onProgress: (String) -> Unit,
         onDone: (Uri) -> Unit,
         onError: (Throwable) -> Unit
@@ -47,7 +47,7 @@ class CollageExporter(private val context: Context) {
             }
 
             val composition = Composition.Builder(sequences)
-                .setVideoCompositorSettings(GridCompositor(uris.size, transforms))
+                .setVideoCompositorSettings(GridCompositor(uris.size, state))
                 .build()
 
             val temp = File(context.cacheDir, "videocollage-${System.currentTimeMillis()}.mp4")
@@ -122,36 +122,34 @@ class CollageExporter(private val context: Context) {
 
     private class GridCompositor(
         private val count: Int,
-        private val transforms: List<CollageView.Transform>
+        private val state: CollageView.ExportState
     ) : VideoCompositorSettings {
 
         override fun getOutputSize(inputSizes: List<Size>): Size {
-            val cols = 2
-            val rows = if (count == 2) 1 else 2
-            val cellW = inputSizes.maxOf { it.width }
-            val cellH = inputSizes.maxOf { it.height }
-            val rawW = cellW * cols
-            val rawH = cellH * rows
-            val limitW = 3840
-            val limitH = 2160
-            val factor = min(1f, min(limitW.toFloat() / rawW, limitH.toFloat() / rawH))
-            return Size(max(2, (rawW * factor).toInt() and -2), max(2, (rawH * factor).toInt() and -2))
+            val maxInputW = inputSizes.maxOf { it.width }.coerceAtMost(3840)
+            val maxInputH = inputSizes.maxOf { it.height }.coerceAtMost(3840)
+            val sourceArea = maxInputW.toLong() * maxInputH.toLong()
+            val ratio = state.aspectRatio
+            var outW = kotlin.math.sqrt(sourceArea * ratio).toInt().coerceAtLeast(720)
+            var outH = (outW / ratio).toInt()
+            val scale = min(1f, min(3840f / outW, 3840f / outH))
+            outW = max(2, (outW * scale).toInt() and -2)
+            outH = max(2, (outH * scale).toInt() and -2)
+            return Size(outW, outH)
         }
 
         override fun getOverlaySettings(inputId: Int, presentationTimeUs: Long): OverlaySettings {
-            val cols = 2
-            val rows = if (count == 2) 1 else 2
-            val col = inputId % cols
-            val row = inputId / cols
-            val t = transforms.getOrNull(inputId) ?: CollageView.Transform(1f, 0f, 0f)
-
-            val baseX = -1f + (col + .5f) * (2f / cols)
-            val baseY = 1f - (row + .5f) * (2f / rows)
-            val moveX = (t.translationX / 1000f).coerceIn(-0.45f, 0.45f)
-            val moveY = (-t.translationY / 1000f).coerceIn(-0.45f, 0.45f)
+            val cell = state.cells.getOrNull(inputId) ?: CollageView.Cell(0f, 0f, 1f, 1f)
+            val t = state.transforms.getOrNull(inputId) ?: CollageView.Transform(1f, 0f, 0f)
+            val cellW = cell.right - cell.left
+            val cellH = cell.bottom - cell.top
+            val baseX = -1f + (cell.left + cell.right)
+            val baseY = 1f - (cell.top + cell.bottom)
+            val moveX = (t.translationX / 1000f).coerceIn(-cellW, cellW)
+            val moveY = (-t.translationY / 1000f).coerceIn(-cellH, cellH)
 
             return StaticOverlaySettings.Builder()
-                .setScale(t.scale / cols, t.scale / rows)
+                .setScale(t.scale * cellW, t.scale * cellH)
                 .setOverlayFrameAnchor(0f, 0f)
                 .setBackgroundFrameAnchor(baseX + moveX, baseY + moveY)
                 .build()
