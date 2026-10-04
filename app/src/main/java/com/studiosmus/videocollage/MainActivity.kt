@@ -40,11 +40,28 @@ class MainActivity : AppCompatActivity() {
             pickVideos.launch(arrayOf("video/*"))
         }
         binding.saveVideo.setOnClickListener {
-            Toast.makeText(
-                this,
-                "Motore export in preparazione: nessun file incompleto verrà salvato.",
-                Toast.LENGTH_LONG
-            ).show()
+            val uris = binding.collage.selectedUris()
+            if (uris.size < 2) return@setOnClickListener
+            binding.saveVideo.isEnabled = false
+            CollageExporter(this).export(
+                uris = uris,
+                transforms = binding.collage.transforms(),
+                onProgress = { message -> runOnUiThread { binding.status.text = message } },
+                onDone = {
+                    runOnUiThread {
+                        binding.status.text = "Video salvato in Galleria"
+                        binding.saveVideo.isEnabled = true
+                        Toast.makeText(this, "Video salvato in Movies/VideoCollage", Toast.LENGTH_LONG).show()
+                    }
+                },
+                onError = { error ->
+                    runOnUiThread {
+                        binding.status.text = "Errore durante il salvataggio"
+                        binding.saveVideo.isEnabled = true
+                        Toast.makeText(this, error.message ?: "Esportazione non riuscita", Toast.LENGTH_LONG).show()
+                    }
+                }
+            )
         }
     }
 
